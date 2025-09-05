@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cadastro de Produtos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #fff7f0;
+      color: #333;
+    }
+    header {
+      background: #ff6f00;
+      color: white;
+      padding: 15px;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0;
+    }
+    main {
+      padding: 20px;
+    }
+    .formulario {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      border-left: 6px solid #ff6f00;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    form input, form button {
+      margin: 5px 0;
+      padding: 10px;
+      width: 100%;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    form button {
+      background: #ff6f00;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+    form button:hover {
+      background: #e65100;
+    }
+    #exportar-pdf, #imprimir-i9 {
+      padding: 10px 20px;
+      background: #ff6f00;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+    #exportar-pdf:hover, #imprimir-i9:hover {
+      background: #e65100;
+    }
+    .galeria {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      border-left: 6px solid #ff6f00;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 15px;
+      margin-top: 10px;
+    }
+    .card {
+      background: #fff3e0;
+      border: 1px solid #ffcc80;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: scale(1.02);
+    }
+    .card h3 {
+      margin: 5px 0;
+      color: #e65100;
+    }
+    .card button {
+      border: none;
+      padding: 8px;
+      margin: 5px 3px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 45%;
+    }
+    .btn-editar {
+      background: #ffa000;
+      color: white;
+    }
+    .btn-editar:hover {
+      background: #ff8f00;
+    }
+    .btn-remover {
+      background: #e53935;
+      color: white;
+    }
+    .btn-remover:hover {
+      background: #c62828;
+    }
+    .total {
+      margin-top: 15px;
+      font-size: 1.3em;
+      font-weight: bold;
+      text-align: right;
+      color: #e65100;
+    }
+    footer {
+      text-align: center;
+      padding: 15px;
+      background: #ff6f00;
+      color: white;
+      margin-top: 20px;
+    }
+    .cliente-info {
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    #pre-visualizacao {
+      white-space: pre;
+      font-family: monospace;
+      font-size: 14px;
+      margin-top: 20px;
+      background: #fff3e0;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ffcc80;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Gaucho Car</h1>
+  </header>
+
+  <main>
+    <section class="formulario">
+      <h2>Cadastro de Produtos</h2>
+      <form id="form-produto">
+        <input type="text" id="nome-cliente" placeholder="Nome do Cliente" required />
+        <input type="text" id="nome-produto" placeholder="Nome do Produto" required />
+        <input type="number" id="quantidade" placeholder="Quantidade" required />
+        <input type="number" id="preco" placeholder="Preço" step="0.01" required />
+        <button type="submit">Cadastrar</button>
+      </form>
+      <button id="exportar-pdf">Exportar PDF</button>
+      <button id="imprimir-i9">Imprimir I9</button>
+      <div id="pre-visualizacao"></div>
+    </section>
+
+    <section class="galeria">
+      <h2>Produtos Cadastrados</h2>
+      <div id="cliente-info" class="cliente-info"></div>
+      <div class="cards" id="lista-produtos"></div>
+      <div class="total" id="total-pedido">Total do Pedido: 0,00</div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 copyright</p>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    const form = document.getElementById("form-produto");
+    const listaProdutos = document.getElementById("lista-produtos");
+    const btnExportar = document.getElementById("exportar-pdf");
+    const btnImprimir = document.getElementById("imprimir-i9");
+    const totalPedidoElem = document.getElementById("total-pedido");
+    const clienteInfoElem = document.getElementById("cliente-info");
+    const preVisualizacao = document.getElementById("pre-visualizacao");
+
+    let produtos = [];
+    let clienteNome = "";
+    let clienteDefinido = false;
+
+    function calcularTotal() {
+      return produtos.reduce((acc, p) => acc + (p.preco * p.quantidade), 0);
+    }
+
+    function atualizarTotal() {
+      const total = calcularTotal();
+      totalPedidoElem.textContent = `Total do Pedido: ${total.toFixed(2)}`;
+    }
+
+    function renderizarProdutos(lista) {
+      listaProdutos.innerHTML = "";
+
+      if (clienteNome) {
+        clienteInfoElem.textContent = `Cliente: ${clienteNome}`;
+      }
+
+      if (lista.length === 0) {
+        listaProdutos.innerHTML = "<p>Nenhum produto encontrado.</p>";
+        atualizarTotal();
+        preVisualizacao.textContent = "";
+        return;
+      }
+
+      lista.forEach((p, index) => {
+        const subtotal = p.preco * p.quantidade;
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+          <h3>${p.nome} - ${p.preco.toFixed(2)}</h3>
+          <p><strong>Quantidade:</strong> ${p.quantidade}</p>
+          <p><strong>Subtotal:</strong> ${subtotal.toFixed(2)}</p>
+          <button class="btn-editar" onclick="editarProduto(${index})">Editar</button>
+          <button class="btn-remover" onclick="removerProduto(${index})">Remover</button>
+        `;
+
+        listaProdutos.appendChild(card);
+      });
+
+      atualizarTotal();
+      atualizarPreVisualizacao();
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      if (!clienteDefinido) {
+        clienteNome = document.getElementById("nome-cliente").value;
+        clienteDefinido = true;
+        document.getElementById("nome-cliente").disabled = true;
+      }
+
+      const nome = document.getElementById("nome-produto").value;
+      const quantidade = parseInt(document.getElementById("quantidade").value);
+      const preco = parseFloat(document.getElementById("preco").value);
+
+      produtos.push({ nome, preco, quantidade });
+
+      form.reset();
+      renderizarProdutos(produtos);
+    });
+
+    // ----------- EXPORTAR PDF ----------- 
+    btnExportar.addEventListener("click", () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 111, 0); // título em laranja
+      doc.text(`Relatório de Produtos - Cliente: ${clienteNome}`, 10, 10);
+
+      doc.autoTable({
+        head: [["Nome", "Quantidade", "Preço", "Subtotal"]],
+        body: produtos.map(p => [
+          p.nome,
+          p.quantidade.toString(),
+          p.preco.toFixed(2),
+          (p.preco * p.quantidade).toFixed(2),
+        ]),
+        styles: { halign: "center" },
+        headStyles: { fillColor: [255, 111, 0] }, // cabeçalho laranja
+      });
+
+      const total = calcularTotal();
+      doc.setTextColor(0, 0, 0); // volta para preto
+      doc.text(
+        `Total do Pedido: ${total.toFixed(2)}`,
+        10,
+        doc.lastAutoTable.finalY + 10
+      );
+
+      doc.save("produtos.pdf");
+
+      // ---- LIMPAR DADOS (igual impressão) ----
+      produtos = [];
+      renderizarProdutos(produtos);
+      clienteDefinido = false;
+      clienteNome = "";
+      document.getElementById("nome-cliente").disabled = false;
+      document.getElementById("nome-cliente").value = "";
+      clienteInfoElem.textContent = "";
+    });
+
+    // ----------- IMPRESSÃO PROFISSIONAL I9 ----------- 
+    function atualizarPreVisualizacao() {
+      if (!clienteNome) return;
+      let texto = `  Ferragem na Mão\n  Cliente: ${clienteNome}\n  ------------------------------\n`;
+      texto += `  Produto           Qtd  Valor  Subtotal\n`;
+      texto += `  ------------------------------\n`;
+      produtos.forEach(p => {
+        const nome = p.nome.padEnd(16, ' ').substring(0,16);
+        const qtd = p.quantidade.toString().padStart(3,' ');
+        const valor = p.preco.toFixed(2).padStart(6,' ');
+        const subtotal = (p.preco*p.quantidade).toFixed(2).padStart(7,' ');
+        texto += `  ${nome} ${qtd} ${valor} ${subtotal}\n`;
+      });
+      texto += `  ------------------------------\n`;
+      texto += `  TOTAL: ${calcularTotal().toFixed(2)}\n`;
+      preVisualizacao.textContent = texto;
+    }
+
+    btnImprimir.addEventListener("click", () => {
+      if (!clienteNome) return alert("Informe o cliente e produtos antes de imprimir.");
+
+      const printContent = preVisualizacao.textContent;
+      const printWindow = window.open('', '', 'width=300,height=600');
+      printWindow.document.write('<pre style="font-family:monospace; font-size:14px; margin:0; padding:0;">');
+      printWindow.document.write(printContent);
+      printWindow.document.write('</pre>');
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+
+      // Limpa lista e cliente após impressão
+      produtos = [];
+      renderizarProdutos(produtos);
+      clienteDefinido = false;
+      clienteNome = "";
+      document.getElementById("nome-cliente").disabled = false;
+      document.getElementById("nome-cliente").value = "";
+      clienteInfoElem.textContent = "";
+    });
+
+    function removerProduto(index) {
+      produtos.splice(index, 1);
+      renderizarProdutos(produtos);
+    }
+
+    function editarProduto(index) {
+      const produto = produtos[index];
+      const novaQuantidade = parseInt(prompt("Nova quantidade:", produto.quantidade));
+      const novoPreco = parseFloat(prompt("Novo preço:", produto.preco));
+
+      if (!isNaN(novaQuantidade) && !isNaN(novoPreco)) {
+        produtos[index].quantidade = novaQuantidade;
+        produtos[index].preco = novoPreco;
+        renderizarProdutos(produtos);
+      }
+    }
+
+    renderizarProdutos(produtos);
+  </script>
+</body>
+</html>
